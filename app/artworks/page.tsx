@@ -1,6 +1,9 @@
 import { getArtworks } from "@/lib/artworks";
 import "./artworks.css";
 
+// This route reads request cookies through the Supabase server client.
+export const dynamic = "force-dynamic";
+
 export default async function ArtworksPage() {
   const artworks = await getArtworks();
 
