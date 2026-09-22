@@ -42,7 +42,7 @@ export default function Home() {
           <h1 id="exhibition-title">HELLO<br /><em>WORLD.</em></h1>
           <div className="hero-bottomline">
             <p>A typographic study in first contact,<br className="desktop-only" /> systems, and small beginnings.</p>
-            <a href="#gallery" className="hero-link">Enter the collection <ArrowDownRight size={19} strokeWidth={1.5} /></a>
+            <a href="/artworks" className="hero-link">Enter the collection <ArrowDownRight size={19} strokeWidth={1.5} /></a>
           </div>
         </section>
 
