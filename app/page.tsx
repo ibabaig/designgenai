@@ -24,6 +24,7 @@ export default function Home() {
       <header className="site-header">
         <a className="wordmark" href="#top" aria-label="MDA, return to top">M<span>_</span>DA</a>
         <div className="header-center">MUSEUM OF DIGITAL ART</div>
+        <a className="header-account" href="/login">MEMBER SIGN IN</a>
         <button type="button" className="menu-toggle" aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
           {menuOpen ? <X size={20} strokeWidth={1.8} /> : <Menu size={21} strokeWidth={1.8} />}
           <span>{menuOpen ? "CLOSE" : "MENU"}</span>
@@ -32,6 +33,8 @@ export default function Home() {
 
       {menuOpen && <nav className="drawer-nav" aria-label="Main navigation">
         <a href="#gallery" onClick={() => setMenuOpen(false)}>Gallery</a>
+        <a href="/collection" onClick={() => setMenuOpen(false)}>The collection</a>
+        <a href="/profile" onClick={() => setMenuOpen(false)}>Profile</a>
         <a href="#about" onClick={() => setMenuOpen(false)}>About the show</a>
         <a href="#visit" onClick={() => setMenuOpen(false)}>Visit</a>
       </nav>}
@@ -42,7 +45,7 @@ export default function Home() {
           <h1 id="exhibition-title">HELLO<br /><em>WORLD.</em></h1>
           <div className="hero-bottomline">
             <p>A typographic study in first contact,<br className="desktop-only" /> systems, and small beginnings.</p>
-            <a href="/artworks" className="hero-link">Enter the collection <ArrowDownRight size={19} strokeWidth={1.5} /></a>
+            <a href="/collection" className="hero-link">Enter the collection <ArrowDownRight size={19} strokeWidth={1.5} /></a>
           </div>
         </section>
 
