@@ -28,6 +28,10 @@ export default async function CollectionPage() {
       <p className="artworks-eyebrow">MEMBER COLLECTION</p>
       <h1 id="artworks-title">THE COLLECTION.</h1>
       <p>{artworks.length} works, members only.</p>
+      <nav className="collection-feature-links" aria-label="Joke museum">
+        <Link href="/gallery">Enter today&apos;s joke gallery</Link>
+        <Link href="/permanent">Browse the permanent collection</Link>
+      </nav>
 
       <div className="artworks-grid">
         {artworks.map((art, i) => (
