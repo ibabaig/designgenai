@@ -10,7 +10,6 @@ export default async function ArtworksPage() {
   return (
     <main className="artworks-page">
       <header className="artworks-header">
-        <a href="/" className="artworks-wordmark" aria-label="MDA home">M<span>_</span>DA</a>
         <p>THE PERMANENT COLLECTION</p>
       </header>
       <section className="artworks-collection" aria-labelledby="artworks-title">

@@ -4,7 +4,6 @@ import "../../auth.css";
 export default function AuthCodeError() {
   return (
     <main className="auth-page">
-      <a className="auth-wordmark" href="/">M<span>_</span>DA</a>
       <p className="auth-eyebrow">MEMBERS / SIGN IN</p>
       <h1>Sign-in didn&apos;t finish.</h1>
       <p>

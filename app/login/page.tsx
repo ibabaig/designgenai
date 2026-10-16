@@ -12,7 +12,6 @@ export default async function LoginPage({
 
   return (
     <main className="auth-page">
-      <a className="auth-wordmark" href="/">M<span>_</span>DA</a>
       <p className="auth-eyebrow">MUSEUM OF DIGITAL ART / MEMBERS</p>
       <h1>Sign in.</h1>
       <p className="auth-copy">Enter the permanent collection and keep your visitor profile up to date.</p>

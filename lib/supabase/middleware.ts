@@ -3,7 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Routes that require a signed-in user. Everything else stays public,
 // so your Manus landing page still works for visitors.
-const PROTECTED = ["/collection", "/profile", "/onboarding"];
+// Pages are visible to everyone; only ACTIONS are gated, at the server
+// action and again by RLS. The only routes that truly need a session
+// are the ones that are about your own account.
+const PROTECTED = ["/profile", "/onboarding"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });

@@ -35,7 +35,6 @@ export default async function OnboardingPage() {
 
   return (
     <main className="auth-page">
-      <a className="auth-wordmark" href="/">M<span>_</span>DA</a>
       <p className="auth-eyebrow">MEMBER PROFILE / 01</p>
       <h1>One more thing.</h1>
       <p className="auth-copy">Tell us your name so we know who&apos;s visiting.</p>

@@ -8,7 +8,6 @@ export default async function ProfilePage() {
 
   return (
     <main className="auth-page">
-      <a className="auth-wordmark" href="/">M<span>_</span>DA</a>
       <p className="auth-eyebrow">MEMBER PROFILE</p>
       <h1>Your profile.</h1>
       <p className="auth-copy">{profile.email}</p>

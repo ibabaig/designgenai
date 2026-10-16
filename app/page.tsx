@@ -19,14 +19,6 @@ export default function Home() {
   const [activeWork, setActiveWork] = useState<Work>(works[0]);
   return (
     <div className="gallery-shell">
-      <header className="site-header">
-        <nav className="top-tabs" aria-label="Main navigation">
-          <a href="/">Hello</a>
-          <a href="/permanent">Collection</a>
-        </nav>
-        <a className="header-center" href="/" aria-label="Museum of Digital Art home">Museum of Digital Art</a>
-        <a className="header-account" href="/login">Member Sign In</a>
-      </header>
 
       <main id="top">
         <section className="hero" aria-labelledby="exhibition-title">
@@ -36,6 +28,7 @@ export default function Home() {
             <p>A typographic study in first contact,<br className="desktop-only" /> systems, and small beginnings.</p>
             <a href="/collection" className="hero-link">Enter the collection <ArrowDownRight size={19} strokeWidth={1.5} /></a>
             <a href="/permanent" className="hero-link">Browse the permanent collection <ArrowDownRight size={19} strokeWidth={1.5} /></a>
+            <a href="/gallery" className="hero-link">See today&apos;s hanging <ArrowDownRight size={19} strokeWidth={1.5} /></a>
           </div>
         </section>
 

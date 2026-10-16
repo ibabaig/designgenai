@@ -1,0 +1,104 @@
+
+/* ============================================================
+   Shared museum navigation bar + signed-out control states.
+   Appended to galleries.css.
+   ============================================================ */
+
+.museum-bar {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.8rem, 2.5vw, 2rem);
+  flex-wrap: wrap;
+  max-width: 1120px;
+  margin: 0 auto clamp(2rem, 5vw, 3.5rem);
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--ink);
+  font-family: "Space Mono", monospace;
+}
+.museum-bar-mark {
+  font: 900 1.25rem/1 "Archivo Black", sans-serif;
+  letter-spacing: -0.09em;
+  color: var(--ink);
+  text-decoration: none;
+}
+.museum-bar-mark span { color: var(--signal); }
+
+.museum-bar-rooms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(0.7rem, 2vw, 1.6rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.museum-bar-rooms a {
+  display: inline-block;
+  padding: 0.3rem 0;
+  color: var(--ink);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.museum-bar-rooms a:hover,
+.museum-bar-rooms a:focus-visible { border-color: var(--signal); }
+.museum-bar-rooms a.is-active { border-color: var(--ink); }
+.members-dot { margin-left: 0.25rem; color: var(--signal); }
+
+.museum-bar-account {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-left: auto;
+}
+.museum-bar-account a,
+.museum-bar-account button {
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--signal);
+  padding: 0.25rem 0;
+  color: var(--ink);
+  font: 700 0.62rem "Space Mono", monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+.museum-bar-account form { margin: 0; }
+
+/* ---- signed-out control states ----------------------------
+   Controls stay visible and keep their shape; they are simply
+   inert, with the reason stated beside them. A disappearing
+   button teaches a visitor nothing about what membership is
+   for. The real guard is RLS, not the disabled attribute. */
+.ballot.is-locked button { opacity: 0.4; cursor: not-allowed; }
+.ballot.is-locked button:hover { background: var(--ink); }
+.ballot-signin,
+.commission-signin {
+  color: var(--signal);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-bottom: 1px solid var(--signal);
+  padding-bottom: 0.15rem;
+}
+.commission-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+.commission-panel button:disabled { opacity: 0.45; cursor: not-allowed; }
+.commission-panel .school-options:has(~ .commission-actions button:disabled) label {
+  cursor: default;
+}
+
+@media (max-width: 760px) {
+  .museum-bar { gap: 0.7rem 1rem; }
+  .museum-bar-account { margin-left: 0; width: 100%; }
+}

@@ -1,0 +1,241 @@
+/* ============================================================
+   The café. Warmer than the galleries on purpose — it is a
+   different room, and the reference illustration is green,
+   pink, blue and tan rather than the museum's red and black.
+   ============================================================ */
+
+.cafe-page {
+  --cafe-paper: #fbf8f1;
+  --cafe-green: #3f7a3a;
+  --cafe-pink: #f2b8c1;
+  --cafe-blue: #4a6fb5;
+  --cafe-tan: #c0a173;
+  background: var(--cafe-paper);
+}
+.cafe-page .museum-header { border-bottom-color: var(--cafe-green); }
+.cafe-page .museum-header h1 { color: var(--cafe-green); }
+.cafe-page .museum-header > p:first-child { color: var(--cafe-green); }
+.cafe-page .museum-nav a { border-bottom-color: var(--cafe-green); }
+
+.cafe-room { max-width: 1100px !important; }
+.cafe-room .museum-kicker { color: var(--cafe-green); margin-bottom: 1.6rem; }
+
+.cafe-tables {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(0.8rem, 2vw, 2rem);
+}
+
+.table-setting { position: relative; }
+.table-art { display: block; width: 100%; height: auto; }
+
+/* The drinks sit on the pink tabletop, which the SVG puts at roughly
+   50% across and 50% down of the 420x300 viewBox. */
+.tabletop {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 0.35rem;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 56px;
+  width: 44%;
+}
+.empty-seat { display: none; }
+.table-label {
+  margin: 0.2rem 0 0;
+  font: 700 0.56rem "Space Mono", monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-ink);
+  text-align: center;
+}
+
+.cafe-empty-note {
+  max-width: 48ch;
+  margin: 2rem auto 0;
+  padding: 1rem 1.2rem;
+  border-left: 3px solid var(--cafe-green);
+  font-size: 0.72rem;
+  line-height: 1.7;
+  color: var(--muted-ink);
+}
+
+/* ---- a drink on a table ------------------------------------ */
+.seated-drink { position: relative; }
+.drink-button {
+  padding: 0 !important;
+  border: 0 !important;
+  background: none !important;
+  line-height: 0;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(.23, 1, .32, 1);
+}
+.drink-button:hover,
+.drink-button:focus-visible { transform: translateY(-5px) scale(1.06); }
+.drink-button:focus-visible { outline: 2px solid var(--cafe-green); outline-offset: 3px; }
+.seated-drink.is-mine .drink-button::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 7px;
+  height: 7px;
+  transform: translateX(-50%);
+  background: var(--signal);
+  border-radius: 50%;
+}
+
+.nametag {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  z-index: 30;
+  width: max-content;
+  max-width: 230px;
+  padding: 0.7rem 0.85rem;
+  transform: translateX(-50%);
+  border: 1px solid var(--cafe-green);
+  background: var(--cafe-paper);
+  box-shadow: 4px 5px 0 var(--cafe-green);
+  text-align: left;
+  pointer-events: none;
+}
+.nametag-patron {
+  margin: 0 0 0.15rem;
+  font: 500 1.05rem/1.1 "Bodoni Moda", serif;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.nametag-order {
+  margin: 0;
+  font: 700 0.55rem "Space Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cafe-green);
+}
+.nametag-note {
+  margin: 0.5rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(63, 122, 58, 0.3);
+  font: italic 400 0.76rem/1.45 "Bodoni Moda", serif;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.cafe-counter {
+  max-width: 790px;
+  margin: clamp(2.5rem, 6vw, 4rem) auto 0;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--cafe-green);
+}
+.cafe-counter h2 { color: var(--cafe-green); }
+.cafe-counter p { font-size: 0.68rem; line-height: 1.7; }
+.counter-drinks { display: flex; flex-wrap: wrap; gap: 1.1rem; margin-top: 1rem; }
+
+/* ---- ordering ---------------------------------------------- */
+.order-panel {
+  max-width: 790px !important;
+  margin: clamp(3rem, 7vw, 6rem) auto 0 !important;
+  padding: clamp(1.25rem, 4vw, 2.6rem);
+  border: 1px solid var(--cafe-green);
+  background: #f3eee4;
+}
+.order-panel h2 { color: var(--cafe-green); }
+.order-panel > p { font-size: 0.72rem; line-height: 1.75; }
+.menu { margin: 1.6rem 0 0; padding: 0; border: 0; }
+.menu legend {
+  margin-bottom: 0.8rem;
+  font: 700 0.62rem "Space Mono", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cafe-green);
+}
+.menu-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 0.55rem;
+}
+.menu-list label {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 0.55rem;
+  height: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid rgba(63, 122, 58, 0.32);
+  cursor: pointer;
+}
+.menu-list label.is-chosen {
+  border-color: var(--cafe-green);
+  background: rgba(63, 122, 58, 0.09);
+}
+.menu-list input { accent-color: var(--cafe-green); }
+.menu-copy { display: grid; gap: 0.15rem; min-width: 0; }
+.menu-copy strong { font-size: 0.68rem; }
+.menu-copy small { font-size: 0.57rem; color: var(--muted-ink); }
+.menu-note {
+  margin: 1rem 0 0;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--cafe-green);
+  font: italic 400 0.92rem/1.45 "Bodoni Moda", serif;
+}
+
+.note-label {
+  display: block;
+  margin: 1.6rem 0 0.5rem;
+  font: 700 0.62rem "Space Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.note-label span { color: var(--muted-ink); font-weight: 400; }
+.order-panel textarea {
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid var(--cafe-green);
+  border-radius: 0;
+  background: var(--cafe-paper);
+  color: var(--ink);
+  font: 400 0.8rem/1.5 "Space Mono", monospace;
+  resize: vertical;
+}
+.order-actions { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-top: 1.3rem; }
+.order-panel button {
+  border: 1px solid var(--cafe-green);
+  background: var(--cafe-green);
+  color: var(--cafe-paper);
+  padding: 0.75rem 1.1rem;
+  font: 700 0.62rem "Space Mono", monospace;
+  cursor: pointer;
+}
+.order-panel button:disabled { opacity: 0.55; cursor: wait; }
+.order-panel button.order-quiet {
+  background: none;
+  color: var(--cafe-green);
+}
+.order-panel [role="status"] {
+  margin-top: 1rem;
+  font-size: 0.68rem;
+  color: var(--cafe-green);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 860px) {
+  .cafe-tables { grid-template-columns: 1fr; max-width: 420px; margin-inline: auto; }
+}

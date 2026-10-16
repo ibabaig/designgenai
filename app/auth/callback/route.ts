@@ -9,8 +9,8 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
 
   // Where to send them once signed in. Default to the gated page.
-  let next = searchParams.get("next") ?? "/collection";
-  if (!next.startsWith("/")) next = "/collection"; // block open redirects
+  let next = searchParams.get("next") ?? "/";
+  if (!next.startsWith("/")) next = "/"; // block open redirects
 
   if (code) {
     const supabase = await createClient();

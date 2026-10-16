@@ -4,8 +4,17 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { castVote, retractVote } from "./actions";
 
+// The arrows are ALWAYS rendered. When you are not signed in they are
+// disabled rather than replaced by a text link — the affordance stays
+// visible so a visitor can see the work is votable, and the reason is
+// stated next to it. Generated content is readable by anyone;
+// modifying it requires a member.
+//
+// Disabling is a courtesy, not the control. The real guard is the RLS
+// insert policy on votes, which no amount of devtools will get past.
 export default function VoteButtons({
-  jokeId,
+  workId,
+  department,
   score,
   voteCount,
   myVote,
@@ -14,7 +23,8 @@ export default function VoteButtons({
   interactionHref,
   interactionLabel,
 }: {
-  jokeId: number;
+  workId: number;
+  department: string;
   score: number;
   voteCount: number;
   myVote: -1 | 1 | undefined;
@@ -31,55 +41,60 @@ export default function VoteButtons({
     voteCount === 1 ? "vote" : "votes"
   }`;
 
-  // You wrote it, so you don't get a ballot. The RLS insert policy
-  // enforces this too; hiding the buttons just avoids offering an
-  // action that would fail.
-  if (isMine) {
-    return <p>{tally} · your work</p>;
-  }
-
-  if (!isSignedIn) {
-    return (
-      <p className="public-vote-prompt">
-        {tally} · <a href={interactionHref}>{interactionLabel}</a>
-      </p>
-    );
-  }
+  // Your own work: you get the tally, never a ballot. The RLS insert
+  // policy enforces this too.
+  const locked = isMine || !isSignedIn;
+  const reason = isMine ? "your work" : null;
 
   function vote(value: -1 | 1) {
+    if (locked) return;
     setError(null);
     startTransition(async () => {
       // Clicking your existing vote again withdraws it.
       const result =
         myVote === value
-          ? await retractVote(jokeId)
-          : await castVote(jokeId, value);
+          ? await retractVote(workId, department)
+          : await castVote(workId, value, department);
       if (!result.ok) setError(result.message);
       router.refresh();
     });
   }
 
   return (
-    <div>
+    <div className={locked ? "ballot is-locked" : "ballot"}>
       <button
+        type="button"
+        className={myVote === 1 ? "is-cast" : undefined}
         onClick={() => vote(1)}
-        disabled={pending}
+        disabled={locked || pending}
         aria-pressed={myVote === 1}
-        aria-label="Worth acquiring"
+        aria-label={isSignedIn ? "Worth acquiring" : "Sign in to vote"}
+        title={isSignedIn ? "Worth acquiring" : "Sign in to vote"}
       >
         ▲
       </button>
 
-      <span>{tally}</span>
+      <span className="ballot-tally">{tally}</span>
 
       <button
+        type="button"
+        className={myVote === -1 ? "is-cast" : undefined}
         onClick={() => vote(-1)}
-        disabled={pending}
+        disabled={locked || pending}
         aria-pressed={myVote === -1}
-        aria-label="Return to storage"
+        aria-label={isSignedIn ? "Return to storage" : "Sign in to vote"}
+        title={isSignedIn ? "Return to storage" : "Sign in to vote"}
       >
         ▼
       </button>
+
+      {reason && <span className="ballot-note">{reason}</span>}
+
+      {!isSignedIn && (
+        <a className="ballot-signin" href={interactionHref}>
+          {interactionLabel}
+        </a>
+      )}
 
       {error && <p role="alert">{error}</p>}
     </div>
