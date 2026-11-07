@@ -1,0 +1,90 @@
+
+/* ============================================================
+   Commission spinner + the two-display split.
+   Appended to galleries.css.
+   ============================================================ */
+
+/* ---- the spinner ------------------------------------------
+   Signal red on the button's dark ground, so it reads as the
+   site's own accent rather than a generic loader. Generation
+   takes seconds, and silence reads as breakage. */
+.commission-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.commission-actions button.is-working {
+  cursor: progress;
+  opacity: 1;
+}
+.spinner {
+  width: 0.78rem;
+  height: 0.78rem;
+  flex: none;
+  border: 2px solid rgba(243, 241, 235, 0.3);
+  border-top-color: var(--signal);
+  border-radius: 50%;
+  animation: commission-spin 640ms linear infinite;
+}
+@keyframes commission-spin {
+  to { transform: rotate(360deg); }
+}
+/* museum.css dims disabled buttons; the working state is not an
+   error state, so keep it at full strength. */
+.commission-panel button.is-working:disabled { opacity: 1; }
+
+.commission-waiting {
+  margin-top: 0.9rem;
+  font-size: 0.64rem !important;
+  line-height: 1.6;
+  color: var(--signal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-top-color: var(--signal);
+    border-right-color: var(--signal);
+  }
+}
+
+/* ---- house commission vs member submissions ----------------
+   The museum's own work is hung at midnight and is the baseline
+   the membership votes against, so it gets the weight of a
+   framed piece. Submissions sit below it as a list. Both are
+   readable by anyone and votable only by members. */
+.house-commission {
+  max-width: 790px;
+  padding: clamp(1.4rem, 4vw, 3rem);
+  border: 1px solid var(--ink);
+  background: #e7e0d4;
+  box-shadow: 8px 9px 0 var(--ink);
+}
+.house-commission > .museum-kicker { color: var(--signal); }
+.house-commission h2 {
+  font-size: clamp(2rem, 5vw, 4.2rem);
+  margin-bottom: 2rem;
+}
+.house-commission .museum-empty {
+  padding: 1.2rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--museum-rule, rgba(18, 18, 18, 0.22));
+}
+
+.member-submissions { padding-top: 1rem; }
+.member-submissions > .museum-kicker { color: var(--muted-ink); }
+.member-submissions h2 {
+  font: 700 0.68rem/1.4 "Space Mono", monospace;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  margin-bottom: 1.2rem;
+}
+.member-submissions .museum-empty {
+  padding: 1.4rem;
+  border: 1px solid var(--museum-rule, rgba(18, 18, 18, 0.22));
+  background: transparent;
+}
+
+@media (max-width: 600px) {
+  .house-commission { box-shadow: 5px 6px 0 var(--ink); }
+}

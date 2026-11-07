@@ -7,6 +7,12 @@ import "./globals.css";
 // imported here rather than per-page so the header is styled on every
 // route, including the auth pages.
 import "./gallery.css";
+// galleries.css carries .is-active, the clipping fix, the member
+// account slot and the Registrar tab. It used to be imported only by
+// the five museum pages, which left the header unstyled-at-the-edges
+// on /, /cafe and /profile -- the routes where the clipping bug kept
+// coming back. Imported here, it applies wherever the header renders.
+import "./galleries.css";
 
 export const metadata: Metadata = {
   title: "HELLO, WORLD. — Gallery",
@@ -34,6 +40,12 @@ export default async function RootLayout({
           signedIn={Boolean(userId)}
           canInteract={Boolean(userId && isComplete(profile))}
           firstName={profile?.first_name}
+          isSuperadmin={Boolean(profile?.is_superadmin)}
+          // The admin area is a separate deployment on its own domain,
+          // so its URL has to be configured rather than derived. Read
+          // on the server and passed down, so there is one place that
+          // knows the name of the variable.
+          adminUrl={process.env.NEXT_PUBLIC_ADMIN_URL}
         />
         {children}
       </body>

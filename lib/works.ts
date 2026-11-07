@@ -17,6 +17,8 @@ export type Work = {
   wing_id: number;
   author_id: string;
   department: DepartmentSlug;
+  /** 'house' = the museum's own midnight commission. */
+  origin: "house" | "member";
   school: string;
   prompt: string;
   model: string;
@@ -40,7 +42,7 @@ export type Work = {
 // clean fix is generated database types (`supabase gen types`), which
 // this project does not have yet.
 const WORK_COLUMNS =
-  "id, wing_id, author_id, department, school, prompt, model, title, body, svg_source, caption, image_path, score, vote_count, hung_on, accessioned_at, credit_name, created_at";
+  "id, wing_id, author_id, department, origin, school, prompt, model, title, body, svg_source, caption, image_path, score, vote_count, hung_on, accessioned_at, credit_name, created_at";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -142,14 +144,14 @@ export class WorkRepository {
   }
 
   // Drives the "2 of 3 left" counter. The cap itself is enforced by the
-  // RLS insert policy, per department per day. Members can read the whole
-  // gallery, so this has to be scoped by author explicitly.
-  async countMineToday(authorId: string, department: DepartmentSlug): Promise<number> {
+  // RLS insert policy: three per DAY across the whole museum, not three
+  // in each department. Members can read the whole gallery, so this has
+  // to be scoped by author explicitly.
+  async countMineToday(authorId: string): Promise<number> {
     const { count, error } = await this.db
       .from("works")
       .select("id", { count: "exact", head: true })
       .eq("author_id", authorId)
-      .eq("department", department)
       .eq("hung_on", today());
     if (error) throw new Error(`Could not count your commissions: ${error.message}`);
     return count ?? 0;
@@ -203,6 +205,17 @@ export class WorkRepository {
     const { error } = await this.db.from("works").delete().eq("id", workId);
     if (error) throw new Error(`Could not withdraw: ${error.message}`);
   }
+}
+
+/** The museum's own commission for a department today, if the midnight
+ *  job has run. At most one per department per day. */
+export function houseWork(works: Work[]): Work | undefined {
+  return works.find((w) => w.origin === "house");
+}
+
+/** Everything members hung today, best first. */
+export function memberWorks(works: Work[]): Work[] {
+  return works.filter((w) => w.origin === "member");
 }
 
 export class VoteRepository {

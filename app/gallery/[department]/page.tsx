@@ -3,7 +3,13 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileRepository, isComplete } from "@/lib/profiles";
 import { WingRepository } from "@/lib/wings";
-import { SchoolRepository, WorkRepository, VoteRepository } from "@/lib/works";
+import {
+  SchoolRepository,
+  WorkRepository,
+  VoteRepository,
+  houseWork,
+  memberWorks,
+} from "@/lib/works";
 import { findDepartment, isDepartmentSlug } from "@/lib/departments";
 import DepartmentNav from "../department-nav";
 import WorkDisplay from "../work-display";
@@ -42,21 +48,48 @@ export default async function DepartmentGallery({
   const [myVotes, mineToday] = canInteract
     ? await Promise.all([
         new VoteRepository(supabase).findMine(),
-        works.countMineToday(userId!, slug),
+        works.countMineToday(userId!),
       ])
     : ([new Map<number, -1 | 1>(), 0] as const);
 
   const schoolName = new Map(schools.map((s) => [s.slug, s.name]));
-  const [leading, ...rest] = onView;
+
+  // Two displays, deliberately. The house commission is what the museum
+  // hung at midnight — it is on the wall for everyone the moment the
+  // gallery opens. Below it is what the membership brought. Both are
+  // readable by anyone and votable only by members, and both compete
+  // for tonight's acquisition.
+  const house = houseWork(onView);
+  const submissions = memberWorks(onView);
 
   const interactionHref = userId ? "/onboarding" : `/login?next=/gallery/${slug}`;
-  const interactionLabel = userId ? "Complete your profile to vote" : "Sign in to vote";
+  const interactionLabel = userId ? "Finish your profile" : "Member sign in";
+
+  const ballot = (w: (typeof onView)[number]) => (
+    <>
+      <VoteButtons
+        workId={w.id}
+        department={slug}
+        score={w.score}
+        voteCount={w.vote_count}
+        myVote={myVotes.get(w.id)}
+        isMine={w.author_id === userId}
+        isSignedIn={canInteract}
+        interactionHref={interactionHref}
+        interactionLabel={interactionLabel}
+      />
+      {w.origin === "member" && w.author_id === userId && (
+        <WithdrawWork workId={w.id} department={slug} />
+      )}
+    </>
+  );
 
   return (
     <main className="museum-page museum-gallery">
       <header className="museum-header">
         <p>
-          <Link href="/gallery">MUSEUM OF DIGITAL ART</Link> · {wing.name.toUpperCase()}
+          <Link href="/gallery">MUSEUM OF DIGITAL ART</Link> ·{" "}
+          {wing.name.toUpperCase()}
         </p>
         <h1>{department.shortName}</h1>
         <p>{department.blurb}</p>
@@ -70,80 +103,60 @@ export default async function DepartmentGallery({
 
       <DepartmentNav active={slug} counts={counts} />
 
-      {onView.length === 0 ? (
-        <section className="museum-empty">
-          <h2>The walls are bare</h2>
-          <p>
-            Nothing has been hung in {department.shortName} today. Commission
-            the first work — though a work nobody votes for is not acquired,
-            so being alone here is not the same as winning.
-          </p>
-        </section>
-      ) : (
-        <>
-          <section className="museum-leading">
-            <p className="museum-kicker">THE WORK CURRENTLY IN FRONT</p>
-            <h2>Leading acquisition</h2>
-            <article className="joke-card joke-card-leading">
-              <WorkDisplay
-                work={leading}
-                schoolName={schoolName.get(leading.school)}
-                variant="leading"
-              />
-              <VoteButtons
-                workId={leading.id}
-                department={slug}
-                score={leading.score}
-                voteCount={leading.vote_count}
-                myVote={myVotes.get(leading.id)}
-                isMine={leading.author_id === userId}
-                isSignedIn={canInteract}
-                interactionHref={interactionHref}
-                interactionLabel={interactionLabel}
-              />
-              {leading.author_id === userId && (
-                <WithdrawWork workId={leading.id} department={slug} />
-              )}
-            </article>
-          </section>
+      {/* ---- the museum's own commission ---- */}
+      <section className="house-commission">
+        <p className="museum-kicker">COMMISSIONED BY THE MUSEUM · HUNG AT MIDNIGHT</p>
+        <h2>Today&apos;s commission</h2>
+        {house ? (
+          <article className="joke-card joke-card-leading">
+            <WorkDisplay
+              work={house}
+              schoolName={schoolName.get(house.school)}
+              variant="leading"
+            />
+            {ballot(house)}
+          </article>
+        ) : (
+          <div className="museum-empty">
+            <p>
+              The museum hasn&apos;t hung its own work in {department.shortName}{" "}
+              today. It arrives with the midnight commission.
+            </p>
+          </div>
+        )}
+      </section>
 
-          {rest.length > 0 && (
-            <section className="museum-also">
-              <h2>Also on view</h2>
-              <ul className="joke-list">
-                {rest.map((work) => (
-                  <li className="joke-card" key={work.id}>
-                    <WorkDisplay
-                      work={work}
-                      schoolName={schoolName.get(work.school)}
-                      variant="card"
-                    />
-                    <VoteButtons
-                      workId={work.id}
-                      department={slug}
-                      score={work.score}
-                      voteCount={work.vote_count}
-                      myVote={myVotes.get(work.id)}
-                      isMine={work.author_id === userId}
-                      isSignedIn={canInteract}
-                      interactionHref={interactionHref}
-                      interactionLabel={interactionLabel}
-                    />
-                    {work.author_id === userId && (
-                      <WithdrawWork workId={work.id} department={slug} />
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </>
-      )}
+      {/* ---- what the membership brought ---- */}
+      <section className="member-submissions">
+        <p className="museum-kicker">COMMISSIONED BY MEMBERS</p>
+        <h2>
+          Submissions{submissions.length > 0 && ` (${submissions.length})`}
+        </h2>
 
-      {/* Always rendered. A signed-out visitor sees the six schools and an
-          inert Commission button with the reason beside it, rather than the
-          feature vanishing. Mutation is still gated at the server action and
-          again by RLS. */}
+        {submissions.length === 0 ? (
+          <div className="museum-empty">
+            <p>
+              No member has hung anything in {department.shortName} today. The
+              museum&apos;s own work leads by default — though a work nobody
+              votes for is not acquired.
+            </p>
+          </div>
+        ) : (
+          <ul className="joke-list">
+            {submissions.map((work) => (
+              <li className="joke-card" key={work.id}>
+                <WorkDisplay
+                  work={work}
+                  schoolName={schoolName.get(work.school)}
+                  variant="card"
+                />
+                {ballot(work)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <div className="commission-panel">
         <CommissionForm
           department={department}
@@ -151,7 +164,7 @@ export default async function DepartmentGallery({
           remaining={Math.max(0, 3 - mineToday)}
           canInteract={canInteract}
           interactionHref={interactionHref}
-          interactionLabel={userId ? "Finish your profile" : "Member sign in"}
+          interactionLabel={interactionLabel}
         />
       </div>
     </main>

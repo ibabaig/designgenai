@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/daily-commission",
+      "schedule": "5 5 * * *"
+    }
+  ]
+}

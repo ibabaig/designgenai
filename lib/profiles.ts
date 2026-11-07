@@ -10,6 +10,12 @@ export type Profile = {
   first_name: string | null;
   last_name: string | null;
   avatar_path: string | null;
+  // Added by the admin migration (009). A member can read this on their
+  // own row; the RLS select policy is own-row only, so nobody can read
+  // anyone else's. Reading it here is what lets the header show a way
+  // in to the admin app WITHOUT the main app having any admin powers of
+  // its own — the flag is a signal to draw a link, nothing more.
+  is_superadmin: boolean;
 };
 
 // Same repository pattern as the artworks table in assignment 2:
@@ -24,7 +30,7 @@ export class ProfileRepository {
   async findById(userId: string): Promise<Profile | null> {
     const { data, error } = await this.db
       .from("profiles")
-      .select("id, email, first_name, last_name, avatar_path")
+      .select("id, email, first_name, last_name, avatar_path, is_superadmin")
       .eq("id", userId)
       .maybeSingle(); // null instead of throwing when there's no row
 

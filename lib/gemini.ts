@@ -7,6 +7,26 @@ import {
 } from "@/lib/departments";
 import { sanitiseSvg } from "@/lib/svg-sanitize";
 import type { School } from "@/lib/works";
+import type { createClient } from "@/lib/supabase/server";
+import {
+  closeRequest,
+  openRequest,
+  recordResponse,
+  resolveChain,
+  type ChainVars,
+  type Origin,
+} from "@/lib/prompt-pipeline";
+
+// Passing this in switches generation from the literals below to the
+// prompt chains in the database, and makes every attempt leave a record.
+// It is optional so that generateWork() still works without a database
+// handle -- and so that a failure to resolve a chain falls back to the
+// literals rather than taking the museum offline.
+export type GenContext = {
+  db: Awaited<ReturnType<typeof createClient>>;
+  requesterId: string | null;
+  origin: Origin;
+};
 
 // `gemini-flash-latest` is the stable alias tracking the current Flash
 // model. Override with GEMINI_MODEL to pin a version.
@@ -32,6 +52,9 @@ export type Generation = {
   svgSource?: string;
   title?: string;
   caption?: string;
+  // The generation_requests row this came from, so the caller can link
+  // the finished work to it. Null when there was no context to log with.
+  requestId?: number | null;
 };
 
 // ---------------------------------------------------------------
@@ -95,6 +118,25 @@ function schoolDirection(slug: string): string {
   return d[slug] ?? "";
 }
 
+// Everything a template can interpolate. {{examples}} and {{terms}} are
+// filled by the pipeline itself, since both are database lookups.
+function baseVars(wing: Wing, school: School, department: DepartmentSlug): ChainVars {
+  const dept = findDepartment(department);
+  return {
+    "wing.name": wing.name,
+    "wing.era_label": wing.era_label,
+    "wing.subject": wing.subject,
+    "school.name": school.name,
+    "school.blurb": school.blurb,
+    "school.direction": schoolDirection(school.slug),
+    audience: AUDIENCE,
+    house_rules: HOUSE_RULES.map((r) => `- ${r}`).join("\n"),
+    palette: PALETTE_FOR_PROMPT,
+    "canvas.w": String(dept?.canvas.w ?? 0),
+    "canvas.h": String(dept?.canvas.h ?? 0),
+  };
+}
+
 function svgPrompt(wing: Wing, school: School, department: DepartmentSlug): string {
   const dept = findDepartment(department)!;
   const { w, h } = dept.canvas;
@@ -156,89 +198,274 @@ function client(): GoogleGenAI {
 export async function generateWork(
   wing: Wing,
   school: School,
-  department: DepartmentSlug
+  department: DepartmentSlug,
+  ctx?: GenContext
 ): Promise<Generation> {
   const dept = findDepartment(department);
   if (!dept) throw new Error(`Unknown department: ${department}`);
   return dept.media === "text"
-    ? generateText(wing, school, department)
-    : generateVisual(wing, school, department);
+    ? generateText(wing, school, department, ctx)
+    : generateVisual(wing, school, department, ctx);
 }
 
 async function generateText(
   wing: Wing,
   school: School,
-  department: DepartmentSlug
+  department: DepartmentSlug,
+  ctx?: GenContext
 ): Promise<Generation> {
-  const prompt = textPrompt(wing, school, department);
+  const chain = ctx
+    ? await resolveChain(ctx.db, department, school.slug, baseVars(wing, school, department))
+    : null;
 
-  const response = await client().models.generateContent({
-    model: MODEL,
+  // No chain resolved means 010 has not run, or every chain in this
+  // department was switched off. Fall back to the literal rather than
+  // refusing to make work.
+  const prompt = chain?.prompt ?? textPrompt(wing, school, department);
+  const model = chain?.modelSlug ?? MODEL;
+
+  const requestId = ctx
+    ? await openRequest(ctx.db, {
+        requesterId: ctx.requesterId,
+        origin: ctx.origin,
+        department,
+        school: school.slug,
+        wingId: wing.id,
+        chainId: chain?.chainId ?? null,
+        modelId: chain?.modelId ?? null,
+        promptText: prompt,
+      })
+    : null;
+
+  const started = Date.now();
+  let response;
+  try {
+    response = await client().models.generateContent({
+    model,
     contents: prompt,
-    // High on purpose: three members commissioning the same school in the
-    // same gallery should not get the same work.
-    config: { temperature: 1.2, maxOutputTokens: 400 },
-  });
+    config: {
+      // THE POETRY BUG. maxOutputTokens is a cap on thinking tokens AND
+      // output tokens together, and it is a hard cutoff. At 400 the model
+      // spent the whole budget reasoning about a poem and returned an
+      // empty string, so poems silently never appeared — while one-line
+      // jokes, which need almost no reasoning, usually squeaked through.
+      // A poem needs room to think and then room to write.
+      //
+      // Both values now come from the chain when one resolved, so they
+      // are tunable per department without a deploy. The literals are
+      // the fallback, and they are the values the seeded chains carry.
+      // High temperature on purpose: three members commissioning the
+      // same school in the same gallery should not get the same work.
+      temperature: chain?.temperature ?? 1.2,
+      maxOutputTokens: chain?.maxOutputTokens ?? 2400,
+    },
+    });
+  } catch (e) {
+    const failed = e instanceof Error ? e.message : String(e);
+    if (ctx) {
+      await closeRequest(ctx.db, requestId, {
+        status: "failed",
+        failureReason: failed,
+        durationMs: Date.now() - started,
+      });
+    }
+    throw e;
+  }
 
+  const durationMs = Date.now() - started;
   const raw = response.text?.trim();
-  if (!raw) throw new Error(modelSilent());
+
+  if (ctx) {
+    await recordResponse(ctx.db, {
+      requestId,
+      modelId: chain?.modelId ?? null,
+      rawText: raw ?? null,
+      finishReason: response.candidates?.[0]?.finishReason ?? null,
+      usage: response.usageMetadata,
+      durationMs,
+      wasSanitised: false,
+      sanitiserOk: null,
+      sanitiserReason: null,
+    });
+  }
+
+  if (!raw) {
+    const reason = modelSilent(response);
+    if (ctx) {
+      await closeRequest(ctx.db, requestId, {
+        status: "failed",
+        failureReason: reason,
+        durationMs,
+      });
+    }
+    throw new Error(reason);
+  }
 
   const unquoted = raw.replace(/^["'“‘]|["'”’]$/g, "").trim();
   // Line breaks are load-bearing in poetry and haiku; elsewhere they are
   // the model being chatty.
   const keepBreaks = department === "poetry" || school.slug === "haiku";
 
+  if (ctx) {
+    await closeRequest(ctx.db, requestId, { status: "succeeded", durationMs });
+  }
+
   return {
     prompt,
-    model: MODEL,
+    model,
     body: keepBreaks ? unquoted : unquoted.replace(/\s*\n+\s*/g, " "),
+    requestId,
   };
 }
 
 async function generateVisual(
   wing: Wing,
   school: School,
-  department: DepartmentSlug
+  department: DepartmentSlug,
+  ctx?: GenContext
 ): Promise<Generation> {
   const dept = findDepartment(department)!;
-  const prompt = svgPrompt(wing, school, department);
+  const chain = ctx
+    ? await resolveChain(ctx.db, department, school.slug, baseVars(wing, school, department))
+    : null;
 
-  const response = await client().models.generateContent({
-    model: MODEL,
+  const prompt = chain?.prompt ?? svgPrompt(wing, school, department);
+  const model = chain?.modelSlug ?? MODEL;
+
+  const requestId = ctx
+    ? await openRequest(ctx.db, {
+        requesterId: ctx.requesterId,
+        origin: ctx.origin,
+        department,
+        school: school.slug,
+        wingId: wing.id,
+        chainId: chain?.chainId ?? null,
+        modelId: chain?.modelId ?? null,
+        promptText: prompt,
+      })
+    : null;
+
+  const started = Date.now();
+  let response;
+  try {
+    response = await client().models.generateContent({
+    model,
     contents: prompt,
-    // Lower than text. Visual composition degrades into noise at high
-    // temperature in a way that prose does not.
-    config: { temperature: 0.95, maxOutputTokens: 4000 },
-  });
+    config: {
+      // Lower than text: visual composition degrades into noise at high
+      // temperature in a way that prose does not. Thinking counts
+      // against the token budget too, and an SVG is a long artefact.
+      temperature: chain?.temperature ?? 0.95,
+      maxOutputTokens: chain?.maxOutputTokens ?? 9000,
+    },
+    });
+  } catch (e) {
+    const failed = e instanceof Error ? e.message : String(e);
+    if (ctx) {
+      await closeRequest(ctx.db, requestId, {
+        status: "failed",
+        failureReason: failed,
+        durationMs: Date.now() - started,
+      });
+    }
+    throw e;
+  }
 
+  const durationMs = Date.now() - started;
   const raw = response.text?.trim();
-  if (!raw) throw new Error(modelSilent());
+  const finishReason = response.candidates?.[0]?.finishReason ?? null;
+
+  if (!raw) {
+    const reason = modelSilent(response);
+    if (ctx) {
+      await recordResponse(ctx.db, {
+        requestId,
+        modelId: chain?.modelId ?? null,
+        rawText: null,
+        finishReason,
+        usage: response.usageMetadata,
+        durationMs,
+        wasSanitised: false,
+        sanitiserOk: null,
+        sanitiserReason: null,
+      });
+      await closeRequest(ctx.db, requestId, {
+        status: "failed",
+        failureReason: reason,
+        durationMs,
+      });
+    }
+    throw new Error(reason);
+  }
 
   const title = raw.match(/^\s*TITLE:\s*(.+)$/im)?.[1]?.trim();
   const caption = raw.match(/^\s*(?:LOGLINE|PLATE):\s*(.+)$/im)?.[1]?.trim();
 
   const clean = sanitiseSvg(raw, dept.canvas);
+
+  // The sanitiser verdict is recorded either way. Its rejection rate is
+  // the one number that says whether the five-ink SVG constraint is
+  // actually holding, and it is invisible unless the misses are stored.
+  if (ctx) {
+    await recordResponse(ctx.db, {
+      requestId,
+      modelId: chain?.modelId ?? null,
+      rawText: raw,
+      finishReason,
+      usage: response.usageMetadata,
+      durationMs,
+      wasSanitised: true,
+      sanitiserOk: clean.ok,
+      sanitiserReason: clean.ok ? null : clean.reason,
+    });
+  }
+
   if (!clean.ok) {
-    throw new Error(
+    const reason =
       `The press could not pull this one (${clean.reason}). Try again — ` +
-        "visual commissions fail more often than text, and a failure " +
-        "doesn't count against your three."
-    );
+      "visual commissions fail more often than text, and a failure " +
+      "doesn't count against your three.";
+    if (ctx) {
+      await closeRequest(ctx.db, requestId, {
+        status: "failed",
+        failureReason: `sanitiser: ${clean.reason}`,
+        durationMs,
+      });
+    }
+    throw new Error(reason);
+  }
+
+  if (ctx) {
+    await closeRequest(ctx.db, requestId, { status: "succeeded", durationMs });
   }
 
   return {
     prompt,
-    model: MODEL,
+    model,
     svgSource: clean.svg,
     title: title?.slice(0, 80) || "Untitled",
     caption: caption?.slice(0, 200),
+    requestId,
   };
 }
 
-function modelSilent(): string {
+// An empty response has two very different causes and the fix differs,
+// so name which one happened instead of guessing.
+function modelSilent(response: { candidates?: Array<{ finishReason?: string }> }): string {
+  const finish = response.candidates?.[0]?.finishReason;
+
+  if (finish === "MAX_TOKENS") {
+    return (
+      "The model ran out of room before it finished writing — thinking and " +
+      "output share one budget. Raise maxOutputTokens in lib/gemini.ts."
+    );
+  }
+  if (finish === "SAFETY" || finish === "PROHIBITED_CONTENT") {
+    return "The model declined this one. Try another school.";
+  }
   return (
-    `Model ${MODEL} returned no text. If this persists, check the model name ` +
-    "in Google AI Studio — it may have been retired."
+    `Model ${MODEL} returned no text${finish ? ` (${finish})` : ""}. If this ` +
+    "persists, check the model name in Google AI Studio — it may have been retired."
   );
 }
 

@@ -5,6 +5,7 @@ import { requireCompleteProfile } from "@/lib/profiles";
 import { WingRepository } from "@/lib/wings";
 import { SchoolRepository, WorkRepository, VoteRepository } from "@/lib/works";
 import { generateWork } from "@/lib/gemini";
+import { attachWork } from "@/lib/prompt-pipeline";
 import { isDepartmentSlug } from "@/lib/departments";
 
 export type ActionResult = { ok: boolean; message: string };
@@ -39,9 +40,19 @@ export async function commissionWork(
 
     // Call the model first: if it fails, nothing is written and the
     // attempt does not count against the member's three.
-    const gen = await generateWork(wing, school, department);
+    //
+    // The context switches generation over to the prompt chains in the
+    // database and makes the attempt leave a generation_requests row
+    // either way -- which is the only reason a failure rate exists to
+    // be measured. It runs as the member, so the RLS insert policy on
+    // generation_requests is what stops a forged house attempt.
+    const gen = await generateWork(wing, school, department, {
+      db: supabase,
+      requesterId: userId,
+      origin: "member",
+    });
 
-    await new WorkRepository(supabase).create({
+    const work = await new WorkRepository(supabase).create({
       wingId: wing.id,
       authorId: userId,
       department,
@@ -53,6 +64,11 @@ export async function commissionWork(
       svgSource: gen.svgSource,
       caption: gen.caption,
     });
+
+    // The work id only exists after the insert, so the link back to the
+    // attempt is made here. Best-effort: a missing link is a gap in the
+    // telemetry, not a failed commission.
+    await attachWork(supabase, gen.requestId ?? null, work.id);
 
     revalidatePath(`/gallery/${department}`);
     revalidatePath("/gallery");

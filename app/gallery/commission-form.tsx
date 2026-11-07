@@ -7,10 +7,9 @@ import type { School } from "@/lib/works";
 import type { Department } from "@/lib/departments";
 
 // Shown to everyone, working only for members. A signed-out visitor can
-// read the six schools and see exactly what commissioning would do —
-// the form is just inert, with the reason stated on the button row.
-// Hiding it entirely made the feature invisible to the people most
-// likely to want an account.
+// read the six schools and see exactly what commissioning would do — the
+// form is just inert, with the reason stated on the button row. Hiding it
+// made the feature invisible to the people most likely to want an account.
 export default function CommissionForm({
   department,
   schools,
@@ -57,13 +56,13 @@ export default function CommissionForm({
         </p>
       ) : exhausted ? (
         <p>
-          You&apos;ve made all three of today&apos;s works for{" "}
-          {department.shortName}. Your allowance is per department, so the
-          other three galleries are still open to you.
+          You&apos;ve used all three of today&apos;s commissions. The
+          allowance is three a day across the whole museum, so choosing where
+          to spend them is part of it. The walls rehang at midnight.
         </p>
       ) : (
         <p>
-          {remaining} of 3 left in {department.shortName} today. The subject is
+          {remaining} of 3 left today, across every department. The subject is
           fixed — the school decides everything else.
         </p>
       )}
@@ -90,15 +89,19 @@ export default function CommissionForm({
       <div className="commission-actions">
         <button
           type="button"
+          className={pending ? "is-working" : undefined}
           onClick={commission}
-          disabled={locked || pending || !school}
+          disabled={locked || pending}
           title={canInteract ? undefined : interactionLabel}
         >
-          {pending
-            ? isVisual
-              ? "At the press…"
-              : "The curator is writing…"
-            : "Commission"}
+          {pending && <span className="spinner" aria-hidden="true" />}
+          <span>
+            {pending
+              ? isVisual
+                ? "At the press…"
+                : "The curator is writing…"
+              : "Commission"}
+          </span>
         </button>
 
         {!canInteract && (
@@ -108,14 +111,24 @@ export default function CommissionForm({
         )}
       </div>
 
-      {isVisual && canInteract && (
-        <p className="commission-caveat">
-          Visual commissions take a few seconds and occasionally fail at the
-          press. A failure doesn&apos;t count against your three.
+      {/* Generation takes a while and silence reads as breakage, so say
+          what is happening and roughly how long it lasts. */}
+      {pending && (
+        <p className="commission-waiting" role="status">
+          {isVisual
+            ? "Composing a plate. Visual commissions take longer — usually ten to twenty seconds."
+            : "Writing. This usually takes a few seconds."}
         </p>
       )}
 
-      {message && <p role="status">{message}</p>}
+      {isVisual && canInteract && !pending && (
+        <p className="commission-caveat">
+          Visual commissions occasionally fail at the press. A failure
+          doesn&apos;t count against your three.
+        </p>
+      )}
+
+      {message && !pending && <p role="status">{message}</p>}
     </section>
   );
 }

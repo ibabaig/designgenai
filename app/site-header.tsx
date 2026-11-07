@@ -21,6 +21,12 @@ import { usePathname } from "next/navigation";
 // Client component purely so usePathname() can mark the active room.
 // It fetches nothing; the layout passes auth state down as props.
 
+// The Registrar tab (the admin area) is appended to this same row for
+// curators only, for exactly the reason the note above gives: a tab in
+// .top-tabs wraps, a link in the account slot grows column 3 and eats
+// the tabs. It is an external link to a different deployment, so it
+// opens in a new tab and carries an explicit arrow.
+
 const ROOMS = [
   { href: "/", label: "Hello" },
   { href: "/gallery", label: "Today" },
@@ -39,10 +45,14 @@ export default function SiteHeader({
   signedIn,
   canInteract,
   firstName,
+  isSuperadmin = false,
+  adminUrl,
 }: {
   signedIn: boolean;
   canInteract: boolean;
   firstName?: string | null;
+  isSuperadmin?: boolean;
+  adminUrl?: string;
 }) {
   const pathname = usePathname() ?? "/";
 
@@ -59,6 +69,18 @@ export default function SiteHeader({
             {r.label}
           </a>
         ))}
+
+        {isSuperadmin && adminUrl ? (
+          <a
+            className="is-admin"
+            href={adminUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Registrar's Office — collection management, in a separate app"
+          >
+            Registrar &#8599;
+          </a>
+        ) : null}
       </nav>
 
       <a className="header-center" href="/" aria-label="Museum of Digital Art home">
