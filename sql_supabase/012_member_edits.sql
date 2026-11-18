@@ -6,7 +6,7 @@
 --   * only their own member work, only today, only humour or poetry,
 --     only before it is accessioned           -> RLS update policy
 --   * only the wording (body), nothing else    -> guard trigger
---   * at most 280 characters (humour) or 600 (poetry), never blank
+--   * at most 280 characters (humour) or 900 (poetry), never blank
 --                                              -> guard trigger
 --   * the model wording is kept                -> original_body, set once
 --
@@ -30,7 +30,7 @@ language sql
 immutable
 set search_path = ''
 as $$
-  select case dept when 'humour' then 280 when 'poetry' then 600 else null end
+  select case dept when 'humour' then 280 when 'poetry' then 900 else null end
 $$;
 
 drop policy if exists "members edit own un-accessioned text works" on public.works;

@@ -5,10 +5,11 @@
 // ever attempted. Change both together.
 //
 // Humour is a tweet's length on purpose: a visitor reads it standing up.
-// Poetry gets room for fourteen lines.
+// Poetry gets room for fourteen long free-verse lines: the model
+// regularly writes 700+ characters within its 14-line rule.
 export const BODY_LIMITS = {
   humour: 280,
-  poetry: 600,
+  poetry: 900,
 } as const;
 
 export type EditableDepartment = keyof typeof BODY_LIMITS;
