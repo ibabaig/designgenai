@@ -16,7 +16,7 @@ import "./galleries.css";
 
 export const metadata: Metadata = {
   title: "HELLO, WORLD. — Gallery",
-  description: "HELLO, WORLD. A typographic exhibition at the Museum of Digital Art.",
+  description: "HELLO, WORLD. A typographic exhibition at the Museum of Digital Archives.",
 };
 
 // Async so the header can be rendered with real auth state on the

@@ -2,11 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { requireCompleteProfile } from "@/lib/profiles";
-import { WingRepository } from "@/lib/wings";
-import { SchoolRepository, WorkRepository, VoteRepository } from "@/lib/works";
-import { generateWork } from "@/lib/gemini";
-import { attachWork } from "@/lib/prompt-pipeline";
+import { WorkRepository, VoteRepository } from "@/lib/works";
+import { commission } from "@/lib/commission";
 import { isDepartmentSlug } from "@/lib/departments";
+import { BODY_LIMITS, countChars, isEditableDepartment } from "@/lib/work-limits";
 
 export type ActionResult = { ok: boolean; message: string };
 
@@ -28,48 +27,7 @@ export async function commissionWork(
 
   try {
     const { supabase, userId } = await requireCompleteProfile();
-
-    const school = await new SchoolRepository(supabase).findOne(schoolSlug, department);
-    if (!school) {
-      return { ok: false, message: "That school doesn't work in this department." };
-    }
-
-    // The wing is read server-side, never accepted from the client. The
-    // RLS policy checks it against current_wing_id() regardless.
-    const wing = await new WingRepository(supabase).findCurrent();
-
-    // Call the model first: if it fails, nothing is written and the
-    // attempt does not count against the member's three.
-    //
-    // The context switches generation over to the prompt chains in the
-    // database and makes the attempt leave a generation_requests row
-    // either way -- which is the only reason a failure rate exists to
-    // be measured. It runs as the member, so the RLS insert policy on
-    // generation_requests is what stops a forged house attempt.
-    const gen = await generateWork(wing, school, department, {
-      db: supabase,
-      requesterId: userId,
-      origin: "member",
-    });
-
-    const work = await new WorkRepository(supabase).create({
-      wingId: wing.id,
-      authorId: userId,
-      department,
-      school: school.slug,
-      prompt: gen.prompt,
-      model: gen.model,
-      title: gen.title,
-      body: gen.body,
-      svgSource: gen.svgSource,
-      caption: gen.caption,
-    });
-
-    // The work id only exists after the insert, so the link back to the
-    // attempt is made here. Best-effort: a missing link is a gap in the
-    // telemetry, not a failed commission.
-    await attachWork(supabase, gen.requestId ?? null, work.id);
-
+    await commission(supabase, userId, department, schoolSlug);
     revalidatePath(`/gallery/${department}`);
     revalidatePath("/gallery");
     return { ok: true, message: "Hung on the wall." };
@@ -78,6 +36,35 @@ export async function commissionWork(
       ok: false,
       message: e instanceof Error ? e.message : "The curator is unavailable.",
     };
+  }
+}
+
+// The member rewords their own joke or poem. Checked three times: here
+// (length, so the message is friendly), by RLS (own, today, text, not
+// acquired) and by the guard trigger (body only, and the same cap).
+export async function rewordWork(
+  workId: number,
+  department: string,
+  body: string
+): Promise<ActionResult & { body?: string }> {
+  if (!isEditableDepartment(department)) {
+    return { ok: false, message: "Only humour and poetry can be reworded." };
+  }
+  const text = String(body ?? "").replace(/\r\n?/g, "\n").trim();
+  if (!text) return { ok: false, message: "A work cannot be blank." };
+  const limit = BODY_LIMITS[department];
+  if (countChars(text) > limit) {
+    return { ok: false, message: `That is ${countChars(text)} characters; the limit is ${limit}.` };
+  }
+
+  try {
+    const { supabase } = await requireCompleteProfile();
+    const work = await new WorkRepository(supabase).reword(workId, text);
+    revalidatePath(`/gallery/${department}`);
+    revalidatePath("/gallery");
+    return { ok: true, message: "Reworded.", body: work.body ?? text };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Could not save." };
   }
 }
 

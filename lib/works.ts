@@ -33,6 +33,9 @@ export type Work = {
   accessioned_at: string | null;
   credit_name: string | null;
   created_at: string;
+  /** The model wording, kept when a member first rewords the work (012). */
+  original_body: string | null;
+  edited_at: string | null;
 };
 
 // supabase-js parses the select list at the TYPE level, and this one is
@@ -42,7 +45,7 @@ export type Work = {
 // clean fix is generated database types (`supabase gen types`), which
 // this project does not have yet.
 const WORK_COLUMNS =
-  "id, wing_id, author_id, department, origin, school, prompt, model, title, body, svg_source, caption, image_path, score, vote_count, hung_on, accessioned_at, credit_name, created_at";
+  "id, wing_id, author_id, department, origin, school, prompt, model, title, body, svg_source, caption, image_path, score, vote_count, hung_on, accessioned_at, credit_name, created_at, original_body, edited_at";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -198,6 +201,29 @@ export class WorkRepository {
       throw new Error(`Could not hang the work: ${error.message}`);
     }
     return data as Work;
+  }
+
+  // Rewording. RLS limits this to your own member text work from today
+  // that has not been accessioned; a trigger allows only the body to
+  // change and enforces the length cap. A row RLS hides comes back as
+  // null rather than an error, so that case is named here.
+  async reword(workId: number, body: string): Promise<Work> {
+    const { data, error } = await this.db
+      .from("works")
+      .update({ body })
+      .eq("id", workId)
+      .select(WORK_COLUMNS)
+      .maybeSingle();
+    if (error) {
+      if (error.code === "23514") throw new Error(error.message);
+      throw new Error(`Could not save the new wording: ${error.message}`);
+    }
+    if (!data) {
+      throw new Error(
+        "Only your own humour or poetry from today can be reworded, and only until it is acquired."
+      );
+    }
+    return data as unknown as Work;
   }
 
   /** RLS already limits this to your own un-accessioned rows. */

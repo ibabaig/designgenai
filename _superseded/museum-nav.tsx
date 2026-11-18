@@ -39,7 +39,7 @@ export default function MuseumNav({
 }) {
   return (
     <nav className="museum-bar" aria-label="Museum navigation">
-      <Link className="museum-bar-mark" href="/" aria-label="Museum of Digital Art home">
+      <Link className="museum-bar-mark" href="/" aria-label="Museum of Digital Archives home">
         M<span>_</span>DA
       </Link>
 

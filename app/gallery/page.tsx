@@ -28,7 +28,7 @@ export default async function GalleryLobby() {
   return (
     <main className="museum-page museum-gallery">
       <header className="museum-header">
-        <p>MUSEUM OF DIGITAL ART · TODAY&apos;S HANGING</p>
+        <p>MUSEUM OF DIGITAL ARCHIVES · TODAY&apos;S HANGING</p>
         <h1>{wing.name}</h1>
         <p>{wing.era_label}</p>
         <p>{wing.blurb}</p>

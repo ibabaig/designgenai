@@ -98,7 +98,7 @@ TypeScript to a project that isn't using it.
 ### 3. Match the existing visual style
 
 The provided pages are structurally correct but deliberately unstyled. The site is
-a typographic "Museum of Digital Art" gallery with a strong existing aesthetic.
+a typographic "Museum of Digital Archives" gallery with a strong existing aesthetic.
 
 Look at how the current pages are styled (Tailwind utility classes, CSS modules, or
 a global stylesheet) and apply the **same** approach to the new pages so they don't

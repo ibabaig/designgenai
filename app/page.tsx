@@ -60,7 +60,7 @@ export default function Home() {
       </main>
 
       <footer id="visit" className="site-footer">
-        <div className="footer-title">MUSEUM<br />OF DIGITAL ART</div>
+        <div className="footer-title">MUSEUM<br />OF DIGITAL ARCHIVES</div>
         <div className="footer-meta"><p>Online exhibition, everywhere.</p><p>Open continuously.</p></div>
         <a className="footer-link" href="mailto:hello@example.com">Say hello <ArrowDownRight size={17} strokeWidth={1.7} /></a>
       </footer>

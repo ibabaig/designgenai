@@ -27,7 +27,7 @@ export default async function PermanentCollectionPage() {
   return (
     <main className="museum-page">
       <header className="museum-header permanent-header">
-        <p>MUSEUM OF DIGITAL ART</p>
+        <p>MUSEUM OF DIGITAL ARCHIVES</p>
         <h1>The Permanent Collection</h1>
         <p>
           Four works are acquired each day, one per department, chosen by the

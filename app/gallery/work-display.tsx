@@ -59,7 +59,17 @@ export default function WorkDisplay({
 
       <p className={variant === "object" ? "permanent-meta" : "joke-meta"}>
         {accessionNumber(work)} · {schoolName ?? work.school}
+        {work.edited_at && " · reworded by the member"}
       </p>
+
+      {/* Honesty about authorship: once a member rewords a work, the
+          model's own wording stays one click away. */}
+      {!isVisual && work.original_body && work.original_body !== work.body && (
+        <details className="work-original">
+          <summary>As the model wrote it</summary>
+          <p>{work.original_body}</p>
+        </details>
+      )}
 
       {work.accessioned_at && (
         <p className="credit-line">

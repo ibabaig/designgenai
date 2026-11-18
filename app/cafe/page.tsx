@@ -29,7 +29,7 @@ export default async function CafePage() {
     return (
       <main className="museum-page cafe-page">
         <header className="museum-header">
-          <p>MUSEUM OF DIGITAL ART</p>
+          <p>MUSEUM OF DIGITAL ARCHIVES</p>
           <h1>The Café</h1>
           <p>
             Three tables at the back of the museum. Members pick a drink,
@@ -66,7 +66,7 @@ export default async function CafePage() {
   return (
     <main className="museum-page cafe-page">
       <header className="museum-header">
-        <p>MUSEUM OF DIGITAL ART</p>
+        <p>MUSEUM OF DIGITAL ARCHIVES</p>
         <h1>The Café</h1>
         <p>
           Three tables. Whoever is here today is here on the tables — hover or

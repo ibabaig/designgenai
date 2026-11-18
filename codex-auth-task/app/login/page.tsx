@@ -11,7 +11,7 @@ export default async function LoginPage({
 
   return (
     <main>
-      <p>MUSEUM OF DIGITAL ART</p>
+      <p>MUSEUM OF DIGITAL ARCHIVES</p>
       <h1>Sign in</h1>
       <p>Members can view the permanent collection and edit their profile.</p>
       <GoogleButton next={next} />

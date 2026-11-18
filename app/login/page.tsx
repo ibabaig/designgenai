@@ -12,7 +12,7 @@ export default async function LoginPage({
 
   return (
     <main className="auth-page">
-      <p className="auth-eyebrow">MUSEUM OF DIGITAL ART / MEMBERS</p>
+      <p className="auth-eyebrow">MUSEUM OF DIGITAL ARCHIVES / MEMBERS</p>
       <h1>Sign in.</h1>
       <p className="auth-copy">Enter the permanent collection and keep your visitor profile up to date.</p>
       <GoogleButton next={next} />

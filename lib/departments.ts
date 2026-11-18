@@ -1,4 +1,4 @@
-// The four departments of the Museum of Digital Art.
+// The four departments of the Museum of Digital Archives.
 //
 // A real museum separates media by department and you navigate by walking
 // into one. That is the separation here: you enter Poetry, you are in

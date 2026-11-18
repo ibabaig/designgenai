@@ -438,3 +438,259 @@
 @media (max-width: 600px) {
   .house-commission { box-shadow: 5px 6px 0 var(--ink); }
 }
+
+/* ============================================================
+   The commission trace: the loading screen as an editor.
+   Five inks only. Ink ground, paper text, signal for the caret,
+   tags and the hard shadow; bone for the work itself; stone and
+   muted ink for comments and line numbers.
+   ============================================================ */
+.trace {
+  margin: 1.4rem 0 0;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: 7px 8px 0 var(--signal);
+  font: 400 0.7rem/1.65 "Space Mono", monospace;
+}
+.trace-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid rgba(243, 241, 235, 0.16);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+}
+.trace-dots { display: inline-flex; gap: 0.32rem; }
+.trace-dots i {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  border: 1px solid #d8dad4;
+}
+.trace-dots i:first-child { background: var(--signal); border-color: var(--signal); }
+.trace-file { color: #d8dad4; }
+.trace-clock { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--paper); }
+
+.trace-code {
+  max-height: min(52vh, 420px);
+  overflow: auto;
+  padding: 0.9rem 0;
+  scrollbar-color: #676761 transparent;
+}
+.trace-code ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: ln;
+}
+.trace-code li {
+  counter-increment: ln;
+  position: relative;
+  padding: 0 1rem 0 3.4rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-height: 1.65em;
+}
+.trace-code li::before {
+  content: counter(ln);
+  position: absolute;
+  left: 0;
+  width: 2.4rem;
+  text-align: right;
+  color: #676761;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+.tk-comment { color: #9b9b94; font-style: italic; }
+.tk-key { color: #d8dad4; }
+.tk-str { color: #e7e0d4; }
+.tk-punct { color: #9b9b94; }
+.tk-tag { color: var(--signal); }
+.tk-attr { color: #d8dad4; }
+.tk-val { color: #e7e0d4; }
+.tk-plain { color: var(--paper); }
+/* The work itself, once it starts, reads in the museum's serif. */
+.trace:not(.trace-svg) .tk-str:only-child {
+  font: 400 1.05rem/1.45 "Bodoni Moda", serif;
+  letter-spacing: -0.02em;
+}
+
+.trace-caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.1em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--signal);
+  animation: trace-blink 1s steps(1) infinite;
+}
+@keyframes trace-blink { 50% { opacity: 0; } }
+
+.trace-status {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.8rem;
+  border-top: 1px solid rgba(243, 241, 235, 0.16);
+  font-size: 0.58rem !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--paper) !important;
+}
+.trace-led {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--signal);
+  animation: trace-pulse 1.2s ease-in-out infinite;
+}
+.trace-done .trace-led { background: #e7e0d4; animation: none; }
+.trace-failed .trace-led { animation: none; }
+@keyframes trace-pulse { 50% { opacity: 0.25; } }
+.trace-status-right { margin-left: auto; color: #9b9b94; text-transform: none; letter-spacing: 0.02em; }
+.trace-error {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  background: var(--signal);
+  color: var(--paper) !important;
+  font-size: 0.66rem !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trace-caret, .trace-led { animation: none; }
+}
+
+/* ---- after the commission -------------------------------- */
+.commission-result {
+  margin-top: 1.8rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--ink);
+}
+.commission-result-plate { margin: 1rem 0; max-width: 360px; }
+.commission-result-plate figcaption {
+  padding: 0.5rem 0.2rem 0;
+  font: 400 1rem/1.3 "Bodoni Moda", serif;
+}
+.commission-again { margin-top: 1rem; }
+
+/* ---- the editor and its character meter ------------------ */
+.work-editor { margin-top: 0.9rem; }
+.work-editor-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.work-editor-text {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 clamp(1.15rem, 2.6vw, 1.6rem)/1.3 "Bodoni Moda", serif;
+  letter-spacing: -0.02em;
+  box-shadow: 5px 6px 0 var(--ink);
+}
+.work-editor-poetry { white-space: pre-wrap; font-size: clamp(1rem, 2.2vw, 1.3rem); line-height: 1.45; }
+.work-editor-text:focus { outline: 2px solid var(--signal); outline-offset: 2px; }
+.work-editor.is-over .work-editor-text { box-shadow: 5px 6px 0 var(--signal); }
+
+.work-meter { margin-top: 1.1rem; }
+.work-meter-track {
+  position: relative;
+  height: 0.55rem;
+  border: 1px solid var(--ink);
+  background: #e7e0d4;
+  overflow: hidden;
+}
+.work-meter-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ink);
+  transition: width 120ms linear, background-color 160ms;
+}
+.work-editor.is-near .work-meter-fill,
+.work-editor.is-over .work-meter-fill { background: var(--signal); }
+.work-editor.is-warm .work-meter-fill {
+  background: repeating-linear-gradient(135deg, var(--ink) 0 4px, var(--signal) 4px 6px);
+}
+.work-meter-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(243, 241, 235, 0.65);
+  mix-blend-mode: difference;
+}
+.work-meter-count {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  margin: 0.45rem 0 0;
+  font-size: 0.64rem !important;
+  font-variant-numeric: tabular-nums;
+}
+.work-meter-count strong { font-size: 0.85rem; }
+.work-meter-left { margin-left: auto; color: var(--muted-ink); }
+.work-editor.is-near .work-meter-left,
+.work-editor.is-over .work-meter-left,
+.work-editor.is-over .work-meter-count strong { color: var(--signal); }
+
+.work-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+.work-editor-actions button,
+.commission-again {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.7rem 0.95rem;
+  font: 700 0.62rem "Space Mono", monospace;
+  cursor: pointer;
+}
+.work-editor-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+.work-editor-actions .work-editor-quiet,
+.commission-panel .work-editor-quiet {
+  background: transparent;
+  color: var(--ink);
+}
+.work-editor-error { color: var(--signal); font-size: 0.66rem; }
+.work-editor-note { font-size: 0.66rem; color: var(--muted-ink); }
+
+.edit-work-panel {
+  flex-basis: 100%;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--ink);
+  background: #d8dad4;
+}
+
+.work-original { margin: 0.4rem 0 0.6rem; font-size: 0.62rem; }
+.work-original summary { cursor: pointer; color: var(--muted-ink); letter-spacing: 0.06em; }
+.work-original p {
+  margin: 0.5rem 0 0;
+  padding-left: 0.8rem;
+  border-left: 2px solid var(--signal);
+  font: italic 400 1rem/1.4 "Bodoni Moda", serif;
+  white-space: pre-line;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type GenerateContentResponse } from "@google/genai";
 import type { Wing } from "@/lib/wings";
 import {
   findDepartment,
@@ -26,7 +26,18 @@ export type GenContext = {
   db: Awaited<ReturnType<typeof createClient>>;
   requesterId: string | null;
   origin: Origin;
+  // Set by the streaming commission endpoint. When present the model is
+  // called with generateContentStream and every chunk is passed on as it
+  // arrives, so the visitor watches the work being written instead of a
+  // spinner. Absent (the nightly cron), the call is a plain request.
+  onEvent?: (event: GenEvent) => void;
 };
+
+export type GenEvent =
+  | { type: "start"; model: string; temperature: number; maxOutputTokens: number }
+  | { type: "thought"; text: string }
+  | { type: "retry"; attempt: number; waitMs: number; reason: string }
+  | { type: "text"; text: string };
 
 // `gemini-flash-latest` is the stable alias tracking the current Flash
 // model. Override with GEMINI_MODEL to pin a version.
@@ -68,7 +79,7 @@ function textPrompt(wing: Wing, school: School, department: DepartmentSlug): str
       : "a short joke that hangs on a wall as the artwork itself";
 
   return [
-    `You are writing ${form} for the Museum of Digital Art.`,
+    `You are writing ${form} for the Museum of Digital Archives.`,
     "",
     `GALLERY: ${wing.name} (${wing.era_label})`,
     `SUBJECT: ${wing.subject}`,
@@ -144,8 +155,8 @@ function svgPrompt(wing: Wing, school: School, department: DepartmentSlug): stri
 
   return [
     isFilm
-      ? "You are composing a single film still for the Museum of Digital Art's Film department."
-      : "You are composing a print for the Museum of Digital Art's Prints department.",
+      ? "You are composing a single film still for the Museum of Digital Archives' Film department."
+      : "You are composing a print for the Museum of Digital Archives' Prints department.",
     "You work in SVG. The SVG is the artwork.",
     "",
     `GALLERY: ${wing.name} (${wing.era_label})`,
@@ -192,7 +203,84 @@ function client(): GoogleGenAI {
         "Environment Variables. It must NOT have a NEXT_PUBLIC_ prefix."
     );
   }
-  return new GoogleGenAI({ apiKey });
+  // Without a timeout an overloaded model can hold a request open until
+  // the function is killed, which reads to the visitor as a frozen page.
+  return new GoogleGenAI({ apiKey, httpOptions: { timeout: 90_000 } });
+}
+
+// Google answers "busy" with 503/504/429. Those are worth two more tries;
+// anything else (a bad key, a retired model) fails at once.
+const TRANSIENT = /\b(503|504|429|UNAVAILABLE|DEADLINE_EXCEEDED|RESOURCE_EXHAUSTED|high demand|overloaded)\b/i;
+const BACKOFF_MS = [2000, 6000];
+
+async function withRetry<T>(run: () => Promise<T>, onEvent?: GenContext["onEvent"]): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await run();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (attempt >= BACKOFF_MS.length || !TRANSIENT.test(msg)) throw e;
+      const waitMs = BACKOFF_MS[attempt];
+      const code = msg.match(/\b(503|504|429)\b/)?.[1] ?? "busy";
+      onEvent?.({ type: "retry", attempt: attempt + 1, waitMs, reason: code });
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+}
+
+// The one place the model is called. Returns the same shape whether it
+// streamed or not, so the logging and post-processing below stay single.
+type ModelResult = {
+  text: string | undefined;
+  candidates?: Array<{ finishReason?: string }>;
+  usageMetadata?: GenerateContentResponse["usageMetadata"];
+};
+
+async function callModel(
+  model: string,
+  prompt: string,
+  config: { temperature: number; maxOutputTokens: number },
+  onEvent?: GenContext["onEvent"]
+): Promise<ModelResult> {
+  if (!onEvent) {
+    const r = await withRetry(() => client().models.generateContent({ model, contents: prompt, config }));
+    return { text: r.text, candidates: r.candidates as ModelResult["candidates"], usageMetadata: r.usageMetadata };
+  }
+
+  onEvent({ type: "start", model, ...config });
+
+  // Retried only up to the first chunk: "busy" arrives before anything is
+  // written, and a stream that already printed text cannot be replayed.
+  const stream = await withRetry(
+    () =>
+      client().models.generateContentStream({
+        model,
+        contents: prompt,
+        // Thought summaries are what fills the first seconds, while the
+        // model is still deciding. They are shown, never stored.
+        config: { ...config, thinkingConfig: { includeThoughts: true } },
+      }),
+    onEvent
+  );
+
+  let text = "";
+  let finishReason: string | undefined;
+  let usage: ModelResult["usageMetadata"];
+  for await (const chunk of stream) {
+    const cand = chunk.candidates?.[0];
+    for (const part of cand?.content?.parts ?? []) {
+      if (!part.text) continue;
+      if (part.thought) {
+        onEvent({ type: "thought", text: part.text });
+      } else {
+        text += part.text;
+        onEvent({ type: "text", text: part.text });
+      }
+    }
+    if (cand?.finishReason) finishReason = cand.finishReason;
+    if (chunk.usageMetadata) usage = chunk.usageMetadata;
+  }
+  return { text, candidates: [{ finishReason }], usageMetadata: usage };
 }
 
 export async function generateWork(
@@ -240,10 +328,7 @@ async function generateText(
   const started = Date.now();
   let response;
   try {
-    response = await client().models.generateContent({
-    model,
-    contents: prompt,
-    config: {
+    response = await callModel(model, prompt, {
       // THE POETRY BUG. maxOutputTokens is a cap on thinking tokens AND
       // output tokens together, and it is a hard cutoff. At 400 the model
       // spent the whole budget reasoning about a poem and returned an
@@ -258,8 +343,7 @@ async function generateText(
       // same school in the same gallery should not get the same work.
       temperature: chain?.temperature ?? 1.2,
       maxOutputTokens: chain?.maxOutputTokens ?? 2400,
-    },
-    });
+    }, ctx?.onEvent);
   } catch (e) {
     const failed = e instanceof Error ? e.message : String(e);
     if (ctx) {
@@ -348,17 +432,13 @@ async function generateVisual(
   const started = Date.now();
   let response;
   try {
-    response = await client().models.generateContent({
-    model,
-    contents: prompt,
-    config: {
+    response = await callModel(model, prompt, {
       // Lower than text: visual composition degrades into noise at high
       // temperature in a way that prose does not. Thinking counts
       // against the token budget too, and an SVG is a long artefact.
       temperature: chain?.temperature ?? 0.95,
       maxOutputTokens: chain?.maxOutputTokens ?? 9000,
-    },
-    });
+    }, ctx?.onEvent);
   } catch (e) {
     const failed = e instanceof Error ? e.message : String(e);
     if (ctx) {

@@ -16,6 +16,8 @@ import WorkDisplay from "../work-display";
 import CommissionForm from "../commission-form";
 import VoteButtons from "../vote-buttons";
 import WithdrawWork from "../withdraw-work";
+import EditWork from "../edit-work";
+import { isEditableDepartment } from "@/lib/work-limits";
 import "../../museum.css";
 import "../../galleries.css";
 
@@ -81,6 +83,14 @@ export default async function DepartmentGallery({
       {w.origin === "member" && w.author_id === userId && (
         <WithdrawWork workId={w.id} department={slug} />
       )}
+      {w.origin === "member" &&
+        w.author_id === userId &&
+        canInteract &&
+        !w.accessioned_at &&
+        w.body &&
+        isEditableDepartment(slug) && (
+          <EditWork workId={w.id} department={slug} body={w.body} />
+        )}
     </>
   );
 
@@ -88,7 +98,7 @@ export default async function DepartmentGallery({
     <main className="museum-page museum-gallery">
       <header className="museum-header">
         <p>
-          <Link href="/gallery">MUSEUM OF DIGITAL ART</Link> ·{" "}
+          <Link href="/gallery">MUSEUM OF DIGITAL ARCHIVES</Link> ·{" "}
           {wing.name.toUpperCase()}
         </p>
         <h1>{department.shortName}</h1>
@@ -162,6 +172,7 @@ export default async function DepartmentGallery({
           department={department}
           schools={schools}
           remaining={Math.max(0, 3 - mineToday)}
+          subject={wing.subject}
           canInteract={canInteract}
           interactionHref={interactionHref}
           interactionLabel={interactionLabel}

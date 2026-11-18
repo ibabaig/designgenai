@@ -83,8 +83,8 @@ export default function SiteHeader({
         ) : null}
       </nav>
 
-      <a className="header-center" href="/" aria-label="Museum of Digital Art home">
-        Museum of Digital Art
+      <a className="header-center" href="/" aria-label="Museum of Digital Archives home">
+        Museum of Digital Archives
       </a>
 
       {canInteract ? (

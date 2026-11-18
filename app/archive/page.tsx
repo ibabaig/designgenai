@@ -44,7 +44,7 @@ export default async function ArchivePage() {
   return (
     <main className="museum-page archive-page">
       <header className="museum-header permanent-header">
-        <p>MUSEUM OF DIGITAL ART</p>
+        <p>MUSEUM OF DIGITAL ARCHIVES</p>
         <h1>Exhibition History</h1>
         <p>
           Every day the museum has been open, and what each department did
